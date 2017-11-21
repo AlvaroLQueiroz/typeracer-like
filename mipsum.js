@@ -132,5 +132,3 @@ let errorHandler = function(opt){
     return `The value '${opt.resultType}' given to 'resultType' is not accepted. Choose between: html or text.`;
   }
 };
-
-export default mIpsum;

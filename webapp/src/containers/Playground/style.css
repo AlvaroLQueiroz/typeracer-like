@@ -3,10 +3,10 @@
   margin-top: 2rem;
 }
 
-.highlightedText.success{
+.success{
   color: green;
 }
 
-.highlightedText.error{
+.error{
   color: red;
 }

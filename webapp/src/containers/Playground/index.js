@@ -1,24 +1,28 @@
 import React, { Component }  from 'react';
 import Card from '../../components/Card';
-import mIpsum from '../../scripts/mipsum.js';
 
 import './style.css';
 
 class Playground extends Component {
   constructor (props) {
     super(props);
-      const text = mIpsum({pNum: 2, resultType: 'text'});
       this.state = {
-        originalText: text,
+        originalText: undefined,
         highlightedText: '',
-        remainingText: text,
-        status: 'success'
+        remainingText: undefined,
+        typeStatus: 'success',
+        connectionStatus: props.connectionStatus
       }
-
-      this.handleChange = this.handleChange.bind(this);
+      props.socket.on('room connected', (data) => {
+        this.setState({
+          originalText: data,
+          remainingText: data
+        })
+      })
+      this.onTextTyped = this.onTextTyped.bind(this);
   }
 
-  handleChange(event) {
+  onTextTyped(event) {
     const typedText = event.target.value;
     let newHighlighted = '';
     let newRemaining = '';
@@ -29,27 +33,29 @@ class Playground extends Component {
       this.setState({
         highlightedText: newHighlighted,
         remainingText: newRemaining,
-        status: 'success'
+        typeStatus: 'success'
       })
     }else{
       this.setState({
-        status: 'error'
+        typeStatus: 'error'
       })
     }
+    this.props.socket.emit('enter room', 'bla');
   }
 
   render() {
+    const classes = this.state.connectionStatus === 'disconnected' ? 'hidden' : ''
     return (
-      <Card title="Playground" >
-        <div className="text">
-          <span className={"highlightedText " + this.state.status }>
+      <Card title="Playground" classes={classes}>
+        <div>
+          <span className={this.state.typeStatus }>
             { this.state.highlightedText }
           </span>
-          <span className="remainingText">
+          <span>
             { this.state.remainingText }
           </span>
         </div>
-        <textarea className="textInput" onChange={ this.handleChange } cols="30" rows="10"></textarea>
+        <textarea className="textInput" onChange={ this.onTextTyped }></textarea>
       </Card>
     );
   }

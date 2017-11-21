@@ -1,11 +1,19 @@
 {
-  "name": "typeracer-like",
+  "name": "typeracer-like-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.2",
+    "socket.io": "^2.0.4"
+  },
+  "devDependencies": {
+    "nodemon": "^1.12.1"
+  }
 }

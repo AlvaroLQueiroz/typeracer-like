@@ -3,10 +3,19 @@ import './style.css';
 
 function List(props) {
   const listItems = props.objects.map((item) => {
-    if(item.link){
-      return (<li key={item.name}><a href={ item.link }>{ item.name }</a></li>)
+    const status = item.name === props.activeItem ? 'active' : '';
+    if(item.score){
+      return (
+        <li key={item.name} className={status} onClick={props.handleClick}>
+          { item.name } ({ item.score})
+        </li>
+      )
     }else {
-      return (<li key={item.name}>{ item.name } ({ item.score})</li>)
+      return (
+        <li key={item.name} className={status} onClick={props.handleClick}>
+          <a>{ item.name }</a>
+        </li>
+      )
     }
   });
 

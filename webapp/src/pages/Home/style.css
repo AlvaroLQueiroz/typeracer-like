@@ -1,5 +1,11 @@
-.columns{
+.col3{
   display: inline-block;
-  width: 35%;
+  width: 30%;
+  margin-left: 5%;
+}
+
+.col7{
+  display: inline-block;
+  width: 60%;
   margin-left: 5%;
 }
