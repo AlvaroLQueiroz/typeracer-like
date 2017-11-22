@@ -45,78 +45,80 @@ const mussumQuotes = [
   "Mauris nec dolor in eros commodo tempor. Aenean aliquam molestie leo, vitae iaculis nisl.",
   "Vehicula non. Ut sed ex eros. Vivamus sit amet nibh non tellus tristique interdum."
 ];
+module.exports = {
 
-var mIpsum = function(options){
-  const defaults = {
-    pNum: 1, //number of paragraphs requested
-    quotes: mussumQuotes, //array of quotes to generate paragraphs
-    mainQuote: mussumMainQuote, //main quote to start your "Lorem Ipsum"
-    genLimit: 1000, //limit of paragraphs that can be requested
-    resultType: 'html', //format of the response: html or text
-    tagBefore: '<p>', //anything you want to put before each paragraph
-    tagAfter: '</p>', //anything you want to put after each paragraph
-    pQuotes: 4 //number of quotes used to build a paragraph
-  };
+  generate: function(options){
+    const defaults = {
+      pNum: 1, //number of paragraphs requested
+      quotes: mussumQuotes, //array of quotes to generate paragraphs
+      mainQuote: mussumMainQuote, //main quote to start your "Lorem Ipsum"
+      genLimit: 1000, //limit of paragraphs that can be requested
+      resultType: 'html', //format of the response: html or text
+      tagBefore: '<p>', //anything you want to put before each paragraph
+      tagAfter: '</p>', //anything you want to put after each paragraph
+      pQuotes: 4 //number of quotes used to build a paragraph
+    };
 
-  /* Define options ---- > */
-  let opt = JSON.parse(JSON.stringify(defaults));
-  if (options) {
-    Object.keys(options).forEach(option => opt[option] = options[option]);
-    let error = errorHandler(opt);
-    if (error){
-      throw new Error(error);
-    }
-  }
-
-  /* Create ---- > */
-  function createParagraphs(opt) {
-    let paragraphs = [];
-    let limit = Math.floor(opt.quotes.length/opt.pQuotes);
-    let roundsNeeded = Math.ceil(opt.pNum/limit);
-
-    let tempParagraphs = [];
-    for (let i = 0; i < roundsNeeded*limit; i++) {
-      tempParagraphs.push(createOneParagraph(opt));
-    }
-
-    tempParagraphs.forEach((paragraph, i) => { if (opt.pNum > i) paragraphs.push(paragraph)});
-    return paragraphs;
-  };
-
-  function createOneParagraph(opt){
-
-    let singleParagraph = '';
-    var tempQuotes = [].concat(opt.quotes);
-    var randomLimit = tempQuotes.length;
-
-    for (var i = 0; i < opt.pQuotes; i++) {
-
-      let thisPosition = Math.round(Math.random() * (randomLimit - 1) + 1) -1; //get a random position
-      singleParagraph += `${tempQuotes[thisPosition]} `;// append the quote on a temp string
-      tempQuotes.splice(thisPosition, 1); //exlude the used value for the array
-      randomLimit --; //decrease max getRandomNumber
-    }
-    return singleParagraph;
-  };
-
-  /* Generate view ---- > */
-  function generateView(paragraphs){
-    let view = '';
-    paragraphs[0] = `${opt.mainQuote} ${paragraphs[0]}`; // add the initial quote
-
-    paragraphs.forEach((paragraph, index) => {
-      if (opt.resultType === 'html') {
-        view += `${opt.tagBefore}${paragraph} ${opt.tagAfter}`;
-      } else{
-        view += `${paragraph} \n\n`;
+    /* Define options ---- > */
+    let opt = JSON.parse(JSON.stringify(defaults));
+    if (options) {
+      Object.keys(options).forEach(option => opt[option] = options[option]);
+      let error = errorHandler(opt);
+      if (error){
+        throw new Error(error);
       }
-    });
+    }
 
-    return view;
-  };
+    /* Create ---- > */
+    function createParagraphs(opt) {
+      let paragraphs = [];
+      let limit = Math.floor(opt.quotes.length/opt.pQuotes);
+      let roundsNeeded = Math.ceil(opt.pNum/limit);
 
-  return generateView(createParagraphs(opt));
-};
+      let tempParagraphs = [];
+      for (let i = 0; i < roundsNeeded*limit; i++) {
+        tempParagraphs.push(createOneParagraph(opt));
+      }
+
+      tempParagraphs.forEach((paragraph, i) => { if (opt.pNum > i) paragraphs.push(paragraph)});
+      return paragraphs;
+    };
+
+    function createOneParagraph(opt){
+
+      let singleParagraph = '';
+      var tempQuotes = [].concat(opt.quotes);
+      var randomLimit = tempQuotes.length;
+
+      for (var i = 0; i < opt.pQuotes; i++) {
+
+        let thisPosition = Math.round(Math.random() * (randomLimit - 1) + 1) -1; //get a random position
+        singleParagraph += `${tempQuotes[thisPosition]} `;// append the quote on a temp string
+        tempQuotes.splice(thisPosition, 1); //exlude the used value for the array
+        randomLimit --; //decrease max getRandomNumber
+      }
+      return singleParagraph;
+    };
+
+    /* Generate view ---- > */
+    function generateView(paragraphs){
+      let view = '';
+      paragraphs[0] = `${opt.mainQuote} ${paragraphs[0]}`; // add the initial quote
+
+      paragraphs.forEach((paragraph, index) => {
+        if (opt.resultType === 'html') {
+          view += `${opt.tagBefore}${paragraph} ${opt.tagAfter}`;
+        } else{
+          view += `${paragraph} \n\n`;
+        }
+      });
+
+      return view;
+    };
+
+    return generateView(createParagraphs(opt));
+  }
+}
 
 let errorHandler = function(opt){
   if (opt.pNum <= 0 || !opt.pNum === '') {

@@ -8,7 +8,7 @@ const mIpsum = require('./mipsum.js');
 
 const rooms = {
   "room 1": {
-    'text': 'sadad',
+    'text': mIpsum.generate({pNum: 2, resultType: 'text'}),
     'users': [
       {'user 1': 'socket 1'},
       {'user 2': 'socket 2'},
@@ -26,17 +26,18 @@ io.on('connection', (socket) => {
   }));
 
   socket.on('enter room', (data) => {
+    let text = undefined;
     if (rooms.hasOwnProperty(data.roomName)){
-      const text = rooms[data.roomName]['text']
+      text = rooms[data.roomName]['text']
       rooms[data.roomName]['users'].push({[data.userName]: socket});
     }else{
-      const text = mIpsum({pNum: 2, resultType: 'text'})
+      text = mIpsum.generate({pNum: 2, resultType: 'text'})
       rooms[data.roomName] = {
         text: text,
         users: [{[data.userName]: socket}]
       }
     }
-
+    console.log(rooms)
     socket.emit('room connected', text)
   })
 });
