@@ -15,30 +15,38 @@ const rooms = {
     ]
   }
 }
+const listRooms = () => {
+  return Object.keys(rooms).map((room) => {
+    return {name: room}
+  })
+}
 
 server.listen(port, function () {
   console.log('Server listening at port %d', port);
 });
 
 io.on('connection', (socket) => {
-  socket.emit('new room', Object.keys(rooms).map((room) => {
-    return {name: room}
-  }));
+  socket.emit('list rooms', listRooms());
 
   socket.on('enter room', (data) => {
     let text = undefined;
     if (rooms.hasOwnProperty(data.roomName)){
       text = rooms[data.roomName]['text']
-      rooms[data.roomName]['users'].push({[data.userName]: socket});
+      rooms[data.roomName]['users'].push({[data.username]: socket});
     }else{
       text = mIpsum.generate({pNum: 2, resultType: 'text'})
       rooms[data.roomName] = {
         text: text,
-        users: [{[data.userName]: socket}]
+        users: [{[data.username]: socket}]
       }
     }
+    console.log('========================================')
     console.log(rooms)
+    console.log('========================================')
     socket.emit('room connected', text)
+    socket.emit('list rooms', listRooms())
   })
+  console.log(listRooms())
+
 });
 
