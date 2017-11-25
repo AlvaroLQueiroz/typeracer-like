@@ -1,8 +1,10 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import $ from 'jquery';
 import io from 'socket.io-client';
+import PropTypes from 'prop-types';
+import React, { Component } from 'react';
+
+import './style.css';
 
 import Rooms from '../Rooms';
 import Playground from '../Playground';
@@ -23,6 +25,7 @@ export default class App extends Component {
 
   componentDidMount(){
     $('#modal').modal()
+    $(".button-collapse").sideNav();
     $('.dropdown-button').dropdown({
       gutter: 0,
       belowOrigin: true,
@@ -57,9 +60,18 @@ export default class App extends Component {
     return (
       <div>
         <nav>
-          <div className="nav-wrapper grey darken-1">
-            <a href="/" className="brand-logo green-text"><b>Type Racer</b></a>
+          <div className="nav-wrapper nav-color">
+            <a href="/" className="brand-logo pagar-me-green-text"><b>Pagar.me Racer</b></a>
+            <a data-activates="mobile-demo" className="button-collapse pagar-me-green-text"><i className="material-icons">menu</i></a>
             <ul id="nav-mobile" className="right hide-on-med-and-down">
+              <li>
+                <a onClick={this.openModal}>
+                  Hello, {this.state.username}
+                  <i className="material-icons right">settings</i>
+                </a>
+              </li>
+            </ul>
+          <ul className="side-nav" id="mobile-demo">
             <li>
               <a onClick={this.openModal}>
                 Hello, {this.state.username}

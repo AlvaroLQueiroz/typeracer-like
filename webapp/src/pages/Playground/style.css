@@ -2,13 +2,8 @@
   text-align: justify
 }
 
-.textInput{
-  width: 100%;
-  margin-top: 2rem;
-}
-
 .valid{
-  color: green;
+  color: #92c83e;
   font-weight: bold;
 }
 
@@ -16,3 +11,4 @@
   color: red;
   font-weight: bold
 }
+

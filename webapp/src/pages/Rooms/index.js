@@ -44,7 +44,7 @@ export default class Rooms extends Component {
           <div>
             {room}
             <Link to={`/room/${room}/user/${this.context.username}/`} className='secondary-content'>
-              <i className="material-icons">play_arrow</i>
+              <i className="material-icons grey-text">play_arrow</i>
             </Link>
           </div>
         </li>
@@ -68,7 +68,7 @@ export default class Rooms extends Component {
         <div className='col s12 m6 offset-m3'>
           <div className="card">
             <div className="card-content">
-              <span className="card-title">Rooms</span>
+              <span className="card-title center-align"><b>Rooms</b></span>
               <ul className="collection">
                 {this.listRender()}
               </ul>
@@ -76,9 +76,9 @@ export default class Rooms extends Component {
             <div className="card-action">
               <div className='row center-align'>
                 <div className='col s12 m8'>
-                  <input type="text" placeholder="Room name" onChange={this.handleNewRoomName}/>
+                  <input type="text" placeholder="Room name" onChange={this.handleNewRoomName} spellCheck='false'/>
                 </div>
-                <button className='btn' onClick={this.createRoom}>
+                <button className='btn grey' onClick={this.createRoom}>
                   <i className='material-icons'>forward</i>
                 </button>
               </div>

@@ -155,24 +155,36 @@ export default class Playground extends Component {
         <div className='col s12 m8 offset-m2'>
           <div className="card">
             <div className="card-content">
-              <span className="card-title">Playground<i className='secondary-content material-icons' onClick={this.goToHomeScreen}>close</i></span>
-              <br/>
-              <h5>Elapsed time: {this.state.elapsedTime} seconds</h5>
-              <h5>Best wps average: {this.state.score}</h5>
-              <div className='text'>
-                <span className={this.state.typingStatus }>
-                  { this.state.typedText }
-                </span>
-                <span>
-                  { this.state.remainingText }
-                </span>
+              <div className='row'>
+                <div className='col s12 center-align'>
+                  <span className="card-title"><b>Playground</b><i className='secondary-content material-icons black-text' onClick={this.goToHomeScreen}>close</i></span>
+                </div>
+                <div className='col s12 m6'>
+                  <h6><b>Elapsed time:</b> {this.state.elapsedTime} sec</h6>
+                </div>
+                <div className='col s12 m6'>
+                  <h6 className='right'><b>Score:</b> {this.state.score}</h6>
+                </div>
               </div>
-              <br/>
-              <textarea className={"materialize-textarea " + this.state.typingStatus}
-                        onChange={ this.onTextTyped }
-                        disabled={!this.state.roundIsStarted}
-                        placeholder={ this.state.roundIsStarted ? 'Write Forrest, writeee!!' : 'Wait for it!!'}
-                        ref={(input) => { this.textArea = input; }}></textarea>
+              <div className='row'>
+                <div className='col s12'>
+                  <div className='text'>
+                    <span className={this.state.typingStatus }>
+                      { this.state.typedText }
+                    </span>
+                    <span>
+                      { this.state.remainingText }
+                    </span>
+                  </div>
+                  <br/>
+                  <textarea className={"materialize-textarea " + this.state.typingStatus}
+                            spellCheck='false'
+                            onChange={ this.onTextTyped }
+                            disabled={!this.state.roundIsStarted}
+                            placeholder={ this.state.roundIsStarted ? 'Write Forrest, writeee!!' : 'Wait for it!!'}
+                            ref={(input) => { this.textArea = input; }}></textarea>
+                </div>
+              </div>
             </div>
             <div className="card-action">
 
