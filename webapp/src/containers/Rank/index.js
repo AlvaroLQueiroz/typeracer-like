@@ -1,24 +1,69 @@
 import React, { Component }  from 'react';
-import Card from '../../components/Card';
-import List from '../../components/List';
+import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
 
 import './style.css';
 
-const players = [
-  {name: "player 1", score: 5},
-  {name: "player 2", score: 4},
-  {name: "player 3", score: 3},
-  {name: "player 4", score: 2},
-  {name: "player 5", score: 1},
-]
-class Rank extends Component {
+export default class Rank extends Component {
+  constructor (props, context) {
+    super(props, context)
+    this.state = {
+      ranking: []
+    }
+    this.listRender = this.listRender.bind(this)
+  }
+
+  componentDidMount(){
+    this.context.socket.on('rank update', data => {
+      this.setState({
+        ranking: data
+      })
+    })
+  }
+
+  componentWillUnmount(){
+    this.context.socket.off('rank update')
+  }
+
+  listRender(){
+    let users = this.state.ranking.map((user) => {
+      return (
+        <li className="collection-item" key={user[0]}>
+          <div>{user[0]} - Score: {user[1]}</div>
+        </li>
+      )
+    })
+    if (users.length === 0){
+      users = ((
+        <li className="collection-item">
+          <div>
+            Something wrong is not right!!!
+          </div>
+        </li>
+      ))
+    }
+    return users
+  }
+
   render() {
     return (
-      <Card title="Rank" >
-        <List objects={players} />
-      </Card>
+      <div className="card">
+        <div className="card-content">
+          <span className="card-title center-align"><b>Rank</b></span>
+          <ul className="collection">
+            {this.listRender()}
+          </ul>
+        </div>
+        <div className="card-action center-align">
+          <Link to={`/room/${this.props.roomName}/status/`} className='btn grey white-text'>
+            <b>Room status</b>
+          </Link>
+        </div>
+      </div>
     );
   }
 }
 
-export default Rank;
+Rank.contextTypes = {
+  socket: PropTypes.object,
+}

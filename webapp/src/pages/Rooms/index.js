@@ -4,6 +4,10 @@ import { Link } from 'react-router-dom';
 
 import './style.css';
 
+const normalizeString = s => {
+  return s.trim().toLowerCase().replace(/ /, '_')
+}
+
 export default class Rooms extends Component {
   constructor(props, context){
     super(props, context)
@@ -13,6 +17,7 @@ export default class Rooms extends Component {
     }
     this.createRoom = this.createRoom.bind(this)
     this.handleNewRoomName = this.handleNewRoomName.bind(this)
+    this.handleNewRoomEnter = this.handleNewRoomEnter.bind(this)
     this.listRender = this.listRender.bind(this)
   }
 
@@ -28,13 +33,21 @@ export default class Rooms extends Component {
   }
 
   createRoom(event){
-    this.props.history.push(`/room/${this.state.newRoomName}/user/${this.context.username}/`)
+    if(this.state.newRoomName.length){
+      this.props.history.push(`/room/${this.state.newRoomName}/user/${this.context.username}/`)
+    }
   }
 
   handleNewRoomName(event){
     this.setState({
-      newRoomName: event.target.value
+      newRoomName: normalizeString(event.target.value)
     })
+  }
+
+  handleNewRoomEnter(event){
+    if(event.which === 13 || event.keyCode === 13){
+      this.createRoom(undefined)
+    }
   }
 
   listRender(){
@@ -76,7 +89,11 @@ export default class Rooms extends Component {
             <div className="card-action">
               <div className='row center-align'>
                 <div className='col s12 m8'>
-                  <input type="text" placeholder="Room name" onChange={this.handleNewRoomName} spellCheck='false'/>
+                  <input type="text"
+                         placeholder="Room name"
+                         spellCheck='false'
+                         onChange={this.handleNewRoomName}
+                         onKeyPress={this.handleNewRoomEnter}/>
                 </div>
                 <button className='btn grey' onClick={this.createRoom}>
                   <i className='material-icons'>forward</i>

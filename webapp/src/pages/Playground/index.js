@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 
 import './style.css';
 
+import Rank from '../../containers/Rank';
+
 export default class Playground extends Component {
   constructor (props, context) {
     super(props, context);
@@ -11,7 +13,7 @@ export default class Playground extends Component {
       typedText: '',
       remainingText: '',
       typingStatus: 'undefined',
-      roundIsStarted: false,
+      roundIsPlaying: false,
       score: 0,
       elapsedTime: 0,
     }
@@ -22,6 +24,7 @@ export default class Playground extends Component {
     this.roundStart = this.roundStart.bind(this)
     this.roundFinish = this.roundFinish.bind(this)
     this.setRoundConfigs = this.setRoundConfigs.bind(this)
+    this.roundUpdate = this.roundUpdate.bind(this)
 
     this.machinePlayerSpeed = Math.random() * (100 - 10) + 10
     this.machinePlayer = undefined
@@ -34,6 +37,7 @@ export default class Playground extends Component {
   componentDidMount(){
     this.context.socket.on('round configs', this.setRoundConfigs )
     this.context.socket.on('round start', this.roundStart )
+    this.context.socket.on('room is locked', this.goToHomeScreen )
 
     // When component is mounted, registers the user in the room
     this.context.socket.emit('enter room', {
@@ -45,6 +49,7 @@ export default class Playground extends Component {
   componentWillUnmount() {
     this.context.socket.off('round configs')
     this.context.socket.off('round start')
+    this.context.socket.off('room is locked')
     this.leaveRoom()
   }
 
@@ -60,7 +65,7 @@ export default class Playground extends Component {
     this.setState({
       score: 0,
       elapsedTime: 0,
-      roundIsStarted: true,
+      roundIsPlaying: true,
     })
 
     // When the machine should play alone
@@ -69,33 +74,43 @@ export default class Playground extends Component {
     }
 
     this.stopwatch = setInterval(() => {
-      let oldScore = this.state.score
+      let score = this.state.score
       // If the amount of words typed in the last interval is higher than higher score
-      if(this.instantTypedWords > oldScore){
-        oldScore = this.instantTypedWords
+      if(this.instantTypedWords > score){
+        score = this.instantTypedWords
       }
       // Reset counter for the new interval
       this.instantTypedWords = 0
 
       // Update playground state
       this.setState(prevState => ({
-        score: oldScore,
+        score: score,
         elapsedTime: prevState.elapsedTime + 1
       }))
+      this.roundUpdate();
     }, this.stopwatchInterval)
 
     // Focuses on the text area so the user doesn't waste time
     this.textArea.focus()
   }
 
+  roundUpdate(score) {
+    this.context.socket.emit('round update', {
+      roomName: this.props.match.params.roomName,
+      score: this.state.score,
+      roundIsPlaying: this.state.roundIsPlaying
+    });
+  }
+
   roundFinish(){
     clearInterval(this.stopwatch)
     this.setState({
-      roundIsStarted: false
+      roundIsPlaying: false
     })
     if(this.autoplay){
       clearInterval(this.machinePlayer)
     }
+    this.roundUpdate()
   }
 
   leaveRoom(){
@@ -152,7 +167,10 @@ export default class Playground extends Component {
   render() {
     return (
       <div className='row'>
-        <div className='col s12 m8 offset-m2'>
+        <div className='col s12 push-s12 m4'>
+          <Rank roomName={this.props.match.params.roomName} />
+        </div>
+        <div className='col s12 m8'>
           <div className="card">
             <div className="card-content">
               <div className='row'>
@@ -180,8 +198,8 @@ export default class Playground extends Component {
                   <textarea className={"materialize-textarea " + this.state.typingStatus}
                             spellCheck='false'
                             onChange={ this.onTextTyped }
-                            disabled={!this.state.roundIsStarted}
-                            placeholder={ this.state.roundIsStarted ? 'Write Forrest, writeee!!' : 'Wait for it!!'}
+                            disabled={!this.state.roundIsPlaying}
+                            placeholder={ this.state.roundIsPlaying ? 'Write Forrest, writeee!!' : 'Wait for it!!'}
                             ref={(input) => { this.textArea = input; }}></textarea>
                 </div>
               </div>
