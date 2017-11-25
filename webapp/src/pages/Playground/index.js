@@ -10,59 +10,156 @@ export default class Playground extends Component {
       originalText: '',
       typedText: '',
       remainingText: '',
-      typingStatus: 'success',
-      gameIsStarted: false,
+      typingStatus: 'undefined',
+      roundIsStarted: false,
+      score: 0,
+      elapsedTime: 0,
     }
     this.onTextTyped = this.onTextTyped.bind(this)
-    console.log(props)
-    // props.socket.on('room connected', (data) => {
-    //   this.setState({
-    //     originalText: data,
-    //     remainingText: data
-    //   })
-    // })
+    this.leaveRoom = this.leaveRoom.bind(this)
+    this.goToHomeScreen = this.goToHomeScreen.bind(this)
+    this.machinePlayerFactory = this.machinePlayerFactory.bind(this)
+    this.roundStart = this.roundStart.bind(this)
+    this.roundFinish = this.roundFinish.bind(this)
+    this.setRoundConfigs = this.setRoundConfigs.bind(this)
 
-    // props.socket.on('game start', (data) => {
-    //   this.setState({
-    //     gameIsStarted: true
-    //   })
-    // })
+    this.machinePlayerSpeed = Math.random() * (100 - 10) + 10
+    this.machinePlayer = undefined
+    this.stopwatch = undefined
+    this.stopwatchInterval = 1000
+    this.instantTypedWords = 0
+    this.autoplay = true
+  }
 
-    // props.socket.on('game finish', (data) => {
-    //   this.setState({
-    //     gameIsStarted: false
-    //   })
-    // })
+  componentDidMount(){
+    this.context.socket.on('round configs', this.setRoundConfigs )
+    this.context.socket.on('round start', this.roundStart )
+
+    // When component is mounted, registers the user in the room
+    this.context.socket.emit('enter room', {
+      roomName: this.props.match.params.roomName,
+      username: this.props.match.params.username
+    })
+  }
+
+  componentWillUnmount() {
+    this.context.socket.off('round configs')
+    this.context.socket.off('round start')
+    this.leaveRoom()
+  }
+
+  setRoundConfigs(data) {
+    this.setState({
+      originalText: data,
+      remainingText: data
+    })
+  }
+
+  roundStart() {
+    // Reset playground state
+    this.setState({
+      score: 0,
+      elapsedTime: 0,
+      roundIsStarted: true,
+    })
+
+    // When the machine should play alone
+    if(this.autoplay){
+      this.machinePlayer = setInterval(this.machinePlayerFactory, this.machinePlayerSpeed)
+    }
+
+    this.stopwatch = setInterval(() => {
+      let oldScore = this.state.score
+      // If the amount of words typed in the last interval is higher than higher score
+      if(this.instantTypedWords > oldScore){
+        oldScore = this.instantTypedWords
+      }
+      // Reset counter for the new interval
+      this.instantTypedWords = 0
+
+      // Update playground state
+      this.setState(prevState => ({
+        score: oldScore,
+        elapsedTime: prevState.elapsedTime + 1
+      }))
+    }, this.stopwatchInterval)
+
+    // Focuses on the text area so the user doesn't waste time
+    this.textArea.focus()
+  }
+
+  roundFinish(){
+    clearInterval(this.stopwatch)
+    this.setState({
+      roundIsStarted: false
+    })
+    if(this.autoplay){
+      clearInterval(this.machinePlayer)
+    }
+  }
+
+  leaveRoom(){
+    this.context.socket.emit('living room', {
+      roomName: this.props.match.params.roomName,
+      socketId: this.context.socket.id
+    })
+  }
+
+  goToHomeScreen(){
+    this.props.history.push('/')
   }
 
   onTextTyped(event) {
     const typedText = event.target.value
-    let newRemaining = ''
+    let remainingText = ''
 
     if( this.state.originalText.startsWith(typedText)){
-      newRemaining = this.state.originalText.substring(typedText.length, this.state.originalText.length)
+      // Split the original text in two parts.
+      // In the first, the text entered by the user
+      // and in the second the text that has not yet been typed
+      remainingText = this.state.originalText.substring(typedText.length, this.state.originalText.length)
+      // If the last typed character  is a space,
+      // then the user just entered another word.
+      // TODO remove the cheat when user repeats space and backspace repeatedly after a word
+      if(typedText[typedText.length - 1] === ' '){
+        this.instantTypedWords += 1
+      }
+      if(remainingText.length === 0){
+        this.roundFinish()
+      }
       this.setState({
         typedText: typedText,
-        remainingText: newRemaining,
-        typingStatus: 'success'
+        remainingText: remainingText,
+        typingStatus: 'valid'
       })
     }else{
       this.setState({
-        typingStatus: 'error'
+        typingStatus: 'invalid'
       })
     }
   }
 
+  machinePlayerFactory(){
+    let event = new Event('change')
+    this.textArea.value += this.state.remainingText[0]
+    this.textArea.dispatchEvent(event)
+    this.onTextTyped(event)
+    if (this.state.remainingText.length === 0){
+      clearInterval(this.machinePlayer)
+    }
+  }
+
   render() {
-    console.log('ola')
-    // const classes = this.props.connectionStatus === 'disconnected' ? 'hidden' : ''
     return (
       <div className='row'>
         <div className='col s12 m8 offset-m2'>
           <div className="card">
             <div className="card-content">
-              <span className="card-title">Playground</span>
-              <div>
+              <span className="card-title">Playground<i className='secondary-content material-icons' onClick={this.goToHomeScreen}>close</i></span>
+              <br/>
+              <h5>Elapsed time: {this.state.elapsedTime} seconds</h5>
+              <h5>Best wps average: {this.state.score}</h5>
+              <div className='text'>
                 <span className={this.state.typingStatus }>
                   { this.state.typedText }
                 </span>
@@ -70,17 +167,15 @@ export default class Playground extends Component {
                   { this.state.remainingText }
                 </span>
               </div>
-              <textarea className="textInput" onChange={ this.onTextTyped } disabled={!this.state.gameIsStarted}></textarea>
+              <br/>
+              <textarea className={"materialize-textarea " + this.state.typingStatus}
+                        onChange={ this.onTextTyped }
+                        disabled={!this.state.roundIsStarted}
+                        placeholder={ this.state.roundIsStarted ? 'Write Forrest, writeee!!' : 'Wait for it!!'}
+                        ref={(input) => { this.textArea = input; }}></textarea>
             </div>
             <div className="card-action">
-              <div className='row center-align'>
-                <div className='col s12 m8'>
-                  <input type="text" placeholder="Room name" onChange={this.handleNewRoomName}/>
-                </div>
-                <button className='btn' onClick={this.createRoom}>
-                  <i className='material-icons'>forward</i>
-                </button>
-              </div>
+
             </div>
           </div>
         </div>

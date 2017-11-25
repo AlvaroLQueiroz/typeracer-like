@@ -20,10 +20,15 @@ export default class Rooms extends Component {
     this.context.socket.on('list rooms', data => {
       this.setState({rooms: data})
     })
+    this.context.socket.emit('get rooms')
+  }
+
+  componentWillUnmount(){
+    this.context.socket.off('list rooms')
   }
 
   createRoom(event){
-    this.props.history.push(`/room/${this.state.newRoomName}/username/${this.context.username}/`)
+    this.props.history.push(`/room/${this.state.newRoomName}/user/${this.context.username}/`)
   }
 
   handleNewRoomName(event){
@@ -33,18 +38,28 @@ export default class Rooms extends Component {
   }
 
   listRender(){
-    return this.state.rooms.map((room) => {
+    let rooms = this.state.rooms.map((room) => {
       return (
-        <li className="collection-item" key={room.name}>
+        <li className="collection-item" key={room}>
           <div>
-            {room.name}
-            <Link to={`/room/${room.name}/username/${this.context.username}/`} className='secondary-content'>
+            {room}
+            <Link to={`/room/${room}/user/${this.context.username}/`} className='secondary-content'>
               <i className="material-icons">play_arrow</i>
             </Link>
           </div>
         </li>
       )
     })
+    if (rooms.length === 0){
+      rooms = ((
+        <li className="collection-item">
+          <div>
+            There is no room. Be the first and create one!
+          </div>
+        </li>
+      ))
+    }
+    return rooms
   }
 
   render() {

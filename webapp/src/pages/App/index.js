@@ -73,8 +73,8 @@ export default class App extends Component {
           <BrowserRouter>
             <Route>
               <Switch>
-              I <Route exact path='/' component={Rooms} />
                 <Route path='/room/:roomName/user/:username/' component={Playground} />
+              I <Route exact path='/' component={Rooms} />
               </Switch>
             </Route>
           </BrowserRouter>

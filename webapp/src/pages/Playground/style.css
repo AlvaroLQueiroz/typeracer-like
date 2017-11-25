@@ -1,12 +1,18 @@
+.text{
+  text-align: justify
+}
+
 .textInput{
   width: 100%;
   margin-top: 2rem;
 }
 
-.success{
+.valid{
   color: green;
+  font-weight: bold;
 }
 
-.error{
+.invalid{
   color: red;
+  font-weight: bold
 }
