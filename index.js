@@ -87,16 +87,17 @@ const roomStatus = roomName => {
   let status = {}
   let roomsRanking = getRoomRanking(roomName)
   let maxScore = Math.max(roomsRanking.map(userScore => { userScore.score}))
-
   status['active_users'] = Object.keys(rooms[roomName]['users']).length
   status['keystrokes'] = Object.values(rooms[roomName]['users']).reduce((acc, user) => {
-    acc + Object.values(user)[0].score
+    return acc + (user.score || 0)
   }, 0)
   status['active_since'] = rooms[roomName].active_sice
   status['counter'] = rooms[roomName].roundStart
   status['below_mean'] = roomsRanking.filter(score => { score < maxScore }).length
   status['ranking'] = roomsRanking
   status['last_minute_lead'] = roomsRanking[0][0]
+
+  return status
 }
 
 server.listen(port, function () {
@@ -178,6 +179,13 @@ io.on('connection', (socket) => {
     removeUserFromRoom(socket.id, roomName)
     // Remove user's socket from room channel
     socket.leave(roomName)
+  })
+
+  socket.on('get status', data => {
+    let roomName = normalizeString(data.roomName)
+    if (rooms[roomName]){
+      socket.emit('status', roomStatus(roomName))
+    }
   })
 
   // When user reaload or close the page

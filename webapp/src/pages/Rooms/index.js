@@ -55,9 +55,11 @@ export default class Rooms extends Component {
       return (
         <li className="collection-item" key={room}>
           <div>
-            {room}
-            <Link to={`/room/${room}/user/${this.context.username}/`} className='secondary-content'>
-              <i className="material-icons grey-text">play_arrow</i>
+            <Link to={`/room/${room}/user/${this.context.username}/`}>
+              {room}
+            </Link>
+            <Link to={`/room/${room}/status/`} className='secondary-content'>
+              <i className="material-icons grey-text">help_outline</i>
             </Link>
           </div>
         </li>

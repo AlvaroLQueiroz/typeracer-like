@@ -8,6 +8,7 @@ import './style.css';
 
 import Rooms from '../Rooms';
 import Playground from '../Playground';
+import StatusPage from '../StatusPage';
 
 export default class App extends Component {
   constructor(props){
@@ -86,6 +87,7 @@ export default class App extends Component {
             <Route>
               <Switch>
                 <Route path='/room/:roomName/user/:username/' component={Playground} />
+                <Route path='/room/:roomName/status/' component={StatusPage} />
               I <Route exact path='/' component={Rooms} />
               </Switch>
             </Route>
