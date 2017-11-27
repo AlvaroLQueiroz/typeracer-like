@@ -11,33 +11,35 @@ export default class Playground extends Component {
     this.state = {
       originalText: '',
       typedText: '',
-      remainingText: '',
+      remainingText: 'Wainting round start!!',
       typingStatus: 'undefined',
       roundIsPlaying: false,
       score: 0,
       elapsedTime: 0,
     }
-    this.onTextTyped = this.onTextTyped.bind(this)
-    this.leaveRoom = this.leaveRoom.bind(this)
     this.goToHomeScreen = this.goToHomeScreen.bind(this)
-    this.machinePlayerFactory = this.machinePlayerFactory.bind(this)
-    this.roundStart = this.roundStart.bind(this)
+    this.leaveRoom = this.leaveRoom.bind(this)
+    this.machinePlayer = this.machinePlayer.bind(this)
+    this.onTextTyped = this.onTextTyped.bind(this)
     this.roundFinish = this.roundFinish.bind(this)
-    this.setRoundConfigs = this.setRoundConfigs.bind(this)
+    this.roundStart = this.roundStart.bind(this)
     this.roundUpdate = this.roundUpdate.bind(this)
+    this.startStopwatch = this.startStopwatch.bind(this)
+    this.stopStopwatch = this.stopStopwatch.bind(this)
 
-    this.machinePlayerSpeed = Math.random() * (100 - 10) + 10
-    this.machinePlayer = undefined
-    this.stopwatch = undefined
-    this.stopwatchInterval = 1000
+    this.autoplay = false
+    this.event = new Event('change')
     this.instantTypedWords = 0
-    this.autoplay = true
+    this.machinePlayerInterval = undefined
+    this.machinePlayerSpeed = Math.random() * (100 - 10) + 10
+    this.roundAnalizer = undefined
+    this.stopwatch = undefined
   }
 
   componentDidMount(){
-    this.context.socket.on('round configs', this.setRoundConfigs )
-    this.context.socket.on('round start', this.roundStart )
     this.context.socket.on('room is locked', this.goToHomeScreen )
+    this.context.socket.on('round finished', this.roundFinish )
+    this.context.socket.on('round start', this.roundStart )
 
     // When component is mounted, registers the user in the room
     this.context.socket.emit('enter room', {
@@ -47,33 +49,40 @@ export default class Playground extends Component {
   }
 
   componentWillUnmount() {
-    this.context.socket.off('round configs')
-    this.context.socket.off('round start')
-    this.context.socket.off('room is locked')
+    if(this.autoplay) clearInterval(this.machinePlayerInterval)
+    clearInterval(this.roundAnalizer)
     this.leaveRoom()
+    this.stopStopwatch()
+    this.context.socket.off('room is locked')
+    this.context.socket.off('round finished')
+    this.context.socket.off('round start')
   }
 
-  setRoundConfigs(data) {
-    this.setState({
-      originalText: data,
-      remainingText: data
-    })
+  startStopwatch(){
+    this.stopwatch = setInterval(() => {
+      this.setState(prevState => ({
+        elapsedTime: prevState.elapsedTime + 1
+      }))
+    }, 1000)
   }
 
-  roundStart() {
+  stopStopwatch(){
+    clearInterval(this.stopwatch)
+  }
+
+  roundStart(data) {
     // Reset playground state
     this.setState({
+      originalText: data.text,
+      remainingText: data.text,
+      typedText: '',
+      typingStatus: 'undefined',
+      roundIsPlaying: true,
       score: 0,
       elapsedTime: 0,
-      roundIsPlaying: true,
     })
 
-    // When the machine should play alone
-    if(this.autoplay){
-      this.machinePlayer = setInterval(this.machinePlayerFactory, this.machinePlayerSpeed)
-    }
-
-    this.stopwatch = setInterval(() => {
+    this.roundAnalizer = setInterval(() => {
       let score = this.state.score
       // If the amount of words typed in the last interval is higher than higher score
       if(this.instantTypedWords > score){
@@ -81,17 +90,22 @@ export default class Playground extends Component {
       }
       // Reset counter for the new interval
       this.instantTypedWords = 0
-
       // Update playground state
-      this.setState(prevState => ({
-        score: score,
-        elapsedTime: prevState.elapsedTime + 1
-      }))
+      this.setState({
+        score: score
+      })
       this.roundUpdate();
-    }, this.stopwatchInterval)
+    }, data.roundAnalyzerTime)
 
     // Focuses on the text area so the user doesn't waste time
+    this.textArea.value = ''
     this.textArea.focus()
+    this.startStopwatch()
+
+    // When the machine should play alone
+    if(this.autoplay){
+      this.machinePlayerInterval = setInterval(this.machinePlayer, this.machinePlayerSpeed)
+    }
   }
 
   roundUpdate(score) {
@@ -103,14 +117,12 @@ export default class Playground extends Component {
   }
 
   roundFinish(){
-    clearInterval(this.stopwatch)
+    clearInterval(this.roundAnalizer)
     this.setState({
       roundIsPlaying: false
     })
-    if(this.autoplay){
-      clearInterval(this.machinePlayer)
-    }
-    this.roundUpdate()
+    if(this.autoplay) clearInterval(this.machinePlayerInterval)
+    this.stopStopwatch()
   }
 
   leaveRoom(){
@@ -154,14 +166,10 @@ export default class Playground extends Component {
     }
   }
 
-  machinePlayerFactory(){
-    let event = new Event('change')
+  machinePlayer(){
     this.textArea.value += this.state.remainingText[0]
-    this.textArea.dispatchEvent(event)
-    this.onTextTyped(event)
-    if (this.state.remainingText.length === 0){
-      clearInterval(this.machinePlayer)
-    }
+    this.textArea.dispatchEvent(this.event)
+    this.onTextTyped(this.event)
   }
 
   render() {
@@ -203,9 +211,6 @@ export default class Playground extends Component {
                             ref={(input) => { this.textArea = input; }}></textarea>
                 </div>
               </div>
-            </div>
-            <div className="card-action">
-
             </div>
           </div>
         </div>

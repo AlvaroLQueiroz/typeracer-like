@@ -1,20 +1,20 @@
-// Setup basic express server
-// var express = require('express');
-// var app = express();
-const server = require('http').createServer();
-const io = require('socket.io')(server);
-const port = process.env.PORT || 3001;
-const mIpsum = require('./mipsum.js');
+const server = require('http').createServer()
+const io = require('socket.io')(server)
+const port = process.env.PORT || 3001
+const mIpsum = require('./mipsum.js')
 
-const countdownTime = 2000
-const rankIntervalTime = 1000
+const countdownTime = 10000 // 10sec
+const rankIntervalTime = 1000 // 1sec
+const roundTime = 300000 // 5min
+const textSize = 5 // Size in amount of paragraphs
 const rooms = {
   // "room_1": {
-  //   'text': mIpsum.generate({pNum: 2, resultType: 'text'}),
   //   'roundIsPlaying': 'true|false',
   //   'roundStart': new Date(),
   //   'active_since': new Date(),
   //   'rankInterval: setInterval(),
+  //   'rankTimeout: setTimeout(),
+  //   'countDown: setTimeout(),
   //   'users': {
   //     'sockerId_1': {
   //       username: 'user 1',
@@ -30,15 +30,17 @@ const rooms = {
   // }
 }
 
-const listRoomNames = () => {
-  return Object.keys(rooms)
-}
-
 const normalizeString = s => {
   return s.trim().toLowerCase().replace(/ /, '_')
 }
 
+const listRoomNames = () => {
+  return Object.keys(rooms)
+}
+
 const checkIfUsernameExists = (username, roomName) => {
+  if (!rooms.hasOwnProperty(roomName)) return true
+
   return Object.values(rooms[roomName]['users'])
   .map(user => user.username)
   .indexOf(username) !== -1
@@ -46,58 +48,109 @@ const checkIfUsernameExists = (username, roomName) => {
 
 // Removes a room if has no user connected
 const removeRoomIfEmpty = roomName => {
-  if(Object.keys(rooms[roomName]['users']).length == 0){
-    // Remove rank update interval
-    clearInterval(rooms[roomName]['rankInterval'])
-    // Remove the room
-    delete rooms[roomName]
-    // Send new list of rooms for everyone
-    io.local.emit('list rooms', listRoomNames())
-  }
+  if (!rooms.hasOwnProperty(roomName)) return false
+  if(Object.keys(rooms[roomName]['users']).length != 0) return false
+
+  // Cancel intervals and timeouts
+  clearInterval(rooms[roomName]['rankInterval'])
+  clearTimeout(rooms[roomName]['roundTimeout'])
+  clearTimeout(rooms[roomName]['countDown'])
+
+  // Remove the room
+  delete rooms[roomName]
+  // Send new list of rooms for everyone
+  io.local.emit('list rooms', listRoomNames())
 }
 
 // Remove user from room and delete room if is empty
 const removeUserFromRoom = (socketId, roomName) => {
-  if(rooms[roomName]['users'].hasOwnProperty(socketId)){
-    // Remove the user
-    delete rooms[roomName]['users'][socketId]
-    // Send the updated rank for everyone
-    io.to(roomName).emit('rank update', getRoomRanking(roomName))
-    removeRoomIfEmpty(roomName)
-    return true
-  }
-  return false
+  if (!rooms.hasOwnProperty(roomName)) return false
+  if(!rooms[roomName]['users'].hasOwnProperty(socketId)) return false
+
+  // Remove the user
+  delete rooms[roomName]['users'][socketId]
+  removeRoomIfEmpty(roomName)
+  return true
 }
 
 const getRoomRanking = roomName => {
+  if (!rooms.hasOwnProperty(roomName)) return []
+
   let scores = Object.values(rooms[roomName]['users']).map(user => {
     return [user.username, user.score || 0]
   })
+  return scores.sort((a, b) => b[1] - a[1])
+}
 
-  return scores.sort((a, b) => {
-    if(a > b){
-      return a
-    }else{
-      return b
-    }
-  })
+const usersIsPlaying = roomName => {
+  if (!rooms.hasOwnProperty(roomName)) return false
+
+  return Object.values(rooms[roomName]['users']).reduce((acc, user) => {
+    return acc || user.roundIsPlaying
+  }, false)
+}
+
+const roomIsPlaying = roomName => {
+  if (!rooms.hasOwnProperty(roomName)) return false
+  return Boolean(usersIsPlaying(roomName) && rooms[roomName]['roundIsPlaying'])
 }
 
 const roomStatus = roomName => {
-  let status = {}
+  if (!rooms.hasOwnProperty(roomName)) return {}
+
   let roomsRanking = getRoomRanking(roomName)
   let maxScore = Math.max(roomsRanking.map(userScore => { userScore.score}))
-  status['active_users'] = Object.keys(rooms[roomName]['users']).length
-  status['keystrokes'] = Object.values(rooms[roomName]['users']).reduce((acc, user) => {
-    return acc + (user.score || 0)
-  }, 0)
-  status['active_since'] = rooms[roomName].active_sice
-  status['counter'] = rooms[roomName].roundStart
-  status['below_mean'] = roomsRanking.filter(score => { score < maxScore }).length
-  status['ranking'] = roomsRanking
-  status['last_minute_lead'] = roomsRanking[0][0]
+  let status = {
+    active_users: Object.keys(rooms[roomName]['users']).length,
+    active_since: rooms[roomName].active_sice,
+    counter: rooms[roomName].roundStart,
+    below_mean: roomsRanking.filter(score => { score < maxScore }).length,
+    ranking: roomsRanking,
+    last_minute_lead: roomsRanking[0][0],
+    keystrokes: Object.values(rooms[roomName]['users']).reduce((acc, user) => {
+      return acc + (user.score || 0)
+    }, 0)
+  }
 
   return status
+}
+
+const roundFinish = roomName => {
+  if (!rooms.hasOwnProperty(roomName)) return false
+
+  io.to(roomName).emit('round finished')
+  if(rooms[roomName]['roundIsPlaying']) roundStartCountdown(roomName)
+  rooms[roomName]['roundIsPlaying'] = false
+  clearTimeout(rooms[roomName]['roundTimeout'])
+}
+
+const roundStart = roomName => {
+  if (!rooms.hasOwnProperty(roomName)) return false
+
+  rooms[roomName]['roundIsPlaying'] = true
+  rooms[roomName]['roundStart'] = new Date()
+  io.to(roomName).emit('round start', {
+    text: mIpsum.generate({pNum: textSize, resultType: 'text'}),
+    roundAnalyzerTime: rankIntervalTime
+  })
+  rooms[roomName]['roundTimeout'] = setTimeout(() => roundFinish(roomName), roundTime)
+}
+
+const roundStartCountdown = roomName =>{
+  if (!rooms.hasOwnProperty(roomName)) return false
+
+  rooms[roomName]['countDown'] = setTimeout(() => roundStart(roomName), countdownTime)
+  io.to(roomName).emit('countdown started', countdownTime)
+}
+
+const startRankLiveUpdate = roomName => {
+  if (!rooms.hasOwnProperty(roomName)) return false
+
+  io.to(roomName).emit('rank update', getRoomRanking(roomName))
+  // Send the user rank of the room to everyone at every x time
+  rooms[roomName]['rankInterval'] = setInterval(() => {
+    io.to(roomName).emit('rank update', getRoomRanking(roomName))
+  }, rankIntervalTime)
 }
 
 server.listen(port, function () {
@@ -112,69 +165,59 @@ io.on('connection', (socket) => {
 
   // When user connect in a room
   socket.on('enter room', (data) => {
-    let roomText = undefined;
-    let roomRoundIsPlaying = undefined;
+    let roundIsPlaying = undefined;
     let roomName = normalizeString(data.roomName)
     let username = normalizeString(data.username)
 
-    // If room exist get the infos from the room
+    // If room exist get the status of the round
     if (rooms.hasOwnProperty(roomName)){
-      roomText = rooms[roomName]['text']
-      roomRoundIsPlaying = rooms[roomName]['roundIsPlaying']
-    }else{ // If room not exist, create it and take the infos
-      roomText = mIpsum.generate({pNum: 2, resultType: 'text'})
-      roomRoundIsPlaying = false
+      roundIsPlaying = rooms[roomName]['roundIsPlaying']
+    }else{ // If room not exist, create it
+      roundIsPlaying = false
       rooms[roomName] = {
-        text: roomText,
-        roundIsPlaying: roomRoundIsPlaying,
+        roundIsPlaying: roundIsPlaying,
         active_sice: new Date(),
         users: {}
       }
       // Send the new list of rooms for all users connectd
       socket.broadcast.emit('list rooms', listRoomNames())
-
-      // Send round start signal to users of the room after x seconds
-      setTimeout(() => {
-        if(rooms[roomName]){
-          io.to(roomName).emit('round start')
-          rooms[roomName]['roundIsPlaying'] = true
-          rooms[roomName]['roundStart'] = new Date()
-        }
-      }, countdownTime)
-
-      // Send the user rank of the room to everyone at every x time
-      rooms[roomName]['rankInterval'] = setInterval(() => {
-        io.to(roomName).emit('rank update', getRoomRanking(roomName))
-      }, rankIntervalTime)
+      startRankLiveUpdate(roomName)
+      roundStartCountdown(roomName)
     }
 
     // If the username already exists in the room, emit an error to the user
     if(checkIfUsernameExists(username, roomName)){
       socket.emit('duplicated username')
-    }else if(roomRoundIsPlaying){ // if the round has already begun, kick the user
+    }else if(roundIsPlaying){ // if the round has already begun, kick the user
       socket.emit('room is locked')
     }else{
       // Adds the user to the room
-      rooms[roomName]['users'][socket.id] = {username: username}
+      rooms[roomName]['users'][socket.id] = {
+        username: username,
+        score: 0,
+        roundIsPlaying: false
+      }
       // Adds the user's socket to the room channel
       socket.join(roomName)
-      // Sends the text of the room to the user
-      socket.emit('round configs', roomText)
-      // Send new rank for everyone
-      io.to(roomName).emit('rank update', getRoomRanking(roomName))
     }
   })
 
-  // Update user's score
+  // Update user's infos
   socket.on('round update', data => {
     let roomName = normalizeString(data.roomName)
+    if(!rooms.hasOwnProperty(roomName)) return false
+    if(!rooms[roomName]['users'].hasOwnProperty(socket.id)) return false
+
     rooms[roomName]['users'][socket.id]['score'] = data.score
     rooms[roomName]['users'][socket.id]['roundIsPlaying'] = data.roundIsPlaying
+    if(roomIsPlaying(roomName) == false) roundFinish(roomName)
   })
 
   // When user leave a room
   socket.on('living room', data => {
     let roomName = normalizeString(data.roomName)
+    if(!rooms.hasOwnProperty(roomName)) return false
+
     // Remove user from de room and delete room if empty
     removeUserFromRoom(socket.id, roomName)
     // Remove user's socket from room channel
@@ -183,9 +226,8 @@ io.on('connection', (socket) => {
 
   socket.on('get status', data => {
     let roomName = normalizeString(data.roomName)
-    if (rooms[roomName]){
-      socket.emit('status', roomStatus(roomName))
-    }
+    if(!rooms.hasOwnProperty(roomName)) return false
+    socket.emit('status', roomStatus(roomName))
   })
 
   // When user reaload or close the page
