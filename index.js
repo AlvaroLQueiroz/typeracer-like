@@ -7,6 +7,7 @@ const countdownTime = 10000 // 10sec
 const rankIntervalTime = 1000 // 1sec
 const roundTime = 300000 // 5min
 const textSize = 5 // Size in amount of paragraphs
+const roundAnalyzerTime = 60000 // 1min (interval to calculate user speed)
 const rooms = {
   // "room_1": {
   //   'roundIsPlaying': 'true|false',
@@ -131,7 +132,7 @@ const roundStart = roomName => {
   rooms[roomName]['roundStart'] = new Date()
   io.to(roomName).emit('round start', {
     text: mIpsum.generate({pNum: textSize, resultType: 'text'}),
-    roundAnalyzerTime: rankIntervalTime
+    roundAnalyzerTime: roundAnalyzerTime
   })
   rooms[roomName]['roundTimeout'] = setTimeout(() => roundFinish(roomName), roundTime)
 }
